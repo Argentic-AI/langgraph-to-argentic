@@ -3,7 +3,8 @@
     python before.py            # the first 4 tickets
     python before.py 8          # all 8; more repeats the same cases
 
-Needs MODEL_KEY: a free NVIDIA key from build.nvidia.com.
+Needs the model you name: ARGENTIC_MODEL_ID, ARGENTIC_MODEL_BASE_URL,
+ARGENTIC_PRICE_IN, ARGENTIC_PRICE_OUT and MODEL_KEY (see README.md).
 """
 import os
 import sys
@@ -12,13 +13,15 @@ from langchain.agents import create_agent  # LangChain's agent loop, built on La
 from langchain_openai import ChatOpenAI
 
 from curve import show
-from tools import MODEL, MODEL_BASE_URL, SYSTEM, TASK, Desk, make_tools
+from tools import SYSTEM, TASK, Desk, make_tools, require_model_env
 
 
 def main(tickets: int) -> None:
+    require_model_env()
     desk = Desk(tickets)
-    llm = ChatOpenAI(model=MODEL, temperature=0, api_key=os.environ["MODEL_KEY"],
-                     base_url=MODEL_BASE_URL)
+    # LangChain talks to an OpenAI-compatible address, so before.py needs ARGENTIC_MODEL_BASE_URL
+    llm = ChatOpenAI(model=os.environ["ARGENTIC_MODEL_ID"], temperature=0, api_key=os.environ["MODEL_KEY"],
+                     base_url=os.environ["ARGENTIC_MODEL_BASE_URL"])
     agent = create_agent(llm, make_tools(desk), system_prompt=SYSTEM)
     # the default recursion limit (25) stops a long run; raise it
     out = agent.invoke({"messages": [("user", TASK)]}, {"recursion_limit": 500})

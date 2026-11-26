@@ -4,11 +4,20 @@ before.py and after.py both import this file and neither changes it.
 The tools run in your process and touch your systems. Here they touch a small
 in-memory desk, so the demo needs no database and no mail server.
 """
+import os
+import sys
+
 from langchain_core.tools import tool
 
-# Both versions call this model: a free one on NVIDIA NIM (key: build.nvidia.com), the same for each.
-MODEL = "nvidia/nemotron-3.5-super-vl-120b-a12b"
-MODEL_BASE_URL = "https://integrate.api.nvidia.com/v1"
+# You name the model in the environment. Nothing here picks one. See README.md.
+MODEL_VARS = ("ARGENTIC_MODEL_ID", "ARGENTIC_MODEL_BASE_URL", "ARGENTIC_PRICE_IN", "ARGENTIC_PRICE_OUT", "MODEL_KEY")
+
+
+def require_model_env() -> None:
+    """Stop with a clear message if the model is not named. There is no default model."""
+    missing = [v for v in MODEL_VARS if not os.environ.get(v)]
+    if missing:
+        sys.exit("Name your model first. Not set: " + ", ".join(missing) + ". See README.md.")
 
 SYSTEM = (
     "You are the support agent for Acme. Work one ticket at a time: look the order up, "

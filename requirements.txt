@@ -8,4 +8,4 @@ langchain-openai>=1.0
 
 # after.py: the Argentic client with its LangChain adapter, pinned to a commit of
 # https://github.com/Argentic-AI/argentic-plugins (adapters/python).
-argentic-ai[langchain] @ git+https://github.com/Argentic-AI/argentic-plugins@d6ee827080955b3246a020f6fc015c9df103a72a#subdirectory=adapters/python
+argentic-ai[langchain] @ git+https://github.com/Argentic-AI/argentic-plugins@3d568aaf000b249531c9f1ce2b353192d85dc944#subdirectory=adapters/python
