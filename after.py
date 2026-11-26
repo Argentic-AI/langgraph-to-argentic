@@ -3,17 +3,19 @@
     python after.py             # the first 4 tickets
     python after.py 8           # all 8; more repeats the same cases
 
-Needs ARGENTIC_API_KEY (https://getargentic.com/platform) and MODEL_KEY.
+Needs ARGENTIC_API_KEY (https://getargentic.com/platform) and the model you name:
+ARGENTIC_MODEL_ID, ARGENTIC_MODEL_PROVIDER or ARGENTIC_MODEL_BASE_URL, ARGENTIC_PRICE_IN,
+ARGENTIC_PRICE_OUT and MODEL_KEY (see README.md).
 """
 import os
 import sys
 import time
 
-from argentic_ai import Argentic, run, summarize_replay
+from argentic_ai import Argentic, model_from_env, run, summarize_replay
 from argentic_ai.langchain import from_langchain_tools  # converts your tools, nothing else
 
 from curve import show
-from tools import MODEL, SYSTEM, TASK, Desk, make_tools
+from tools import SYSTEM, TASK, Desk, make_tools, require_model_env
 
 
 class Metered(Argentic):
@@ -33,6 +35,7 @@ class Metered(Argentic):
 
 
 def main(tickets: int) -> None:
+    require_model_env()
     client = Metered(log=lambda s: None)
     if not client.api_key or not client.model_key:
         sys.exit("Set ARGENTIC_API_KEY and MODEL_KEY first (see README.md).")
@@ -42,7 +45,7 @@ def main(tickets: int) -> None:
     result = run(
         client, agent=agent, run_id=run_id, task=TASK, system=SYSTEM,
         tools=from_langchain_tools(make_tools(desk)),   # your tools, unchanged
-        model={"provider": "nvidia", "id": MODEL, "prices": {"in": 0, "out": 0}}, max_steps=500, log=lambda s: None,
+        model=model_from_env(), max_steps=500, log=lambda s: None,
     )
 
     print("reply:", result.reply)

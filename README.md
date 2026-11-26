@@ -12,7 +12,8 @@ You keep your `@tool` functions and your system prompt. You drop the loop. Argen
 from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 
-llm = ChatOpenAI(model=MODEL, base_url=MODEL_BASE_URL, api_key=os.environ["MODEL_KEY"], temperature=0)
+llm = ChatOpenAI(model=os.environ["ARGENTIC_MODEL_ID"], base_url=os.environ["ARGENTIC_MODEL_BASE_URL"],
+                 api_key=os.environ["MODEL_KEY"], temperature=0)
 agent = create_agent(llm, make_tools(desk), system_prompt=SYSTEM)
 out = agent.invoke({"messages": [("user", TASK)]}, {"recursion_limit": 500})
 ```
@@ -24,7 +25,7 @@ The default recursion limit is 25, which stops a long run, so the script raises 
 `after.py` hands the same tools and the same prompt to `run()`:
 
 ```python
-from argentic_ai import Argentic, run
+from argentic_ai import Argentic, model_from_env, run
 from argentic_ai.langchain import from_langchain_tools
 
 result = run(
@@ -32,8 +33,8 @@ result = run(
     agent="support-agent", run_id="queue-1",
     task=TASK, system=SYSTEM,
     tools=from_langchain_tools(make_tools(desk)),  # your tools, unchanged
-    model={"provider": "nvidia", "id": MODEL, "prices": {"in": 0, "out": 0}},
-    max_steps=500,                                # the default is 8 wakes
+    model=model_from_env(),                        # the model you named in the environment
+    max_steps=500,                                 # the default is 8 wakes
 )
 print(result.reply)
 ```
@@ -42,14 +43,18 @@ print(result.reply)
 
 ## Run it
 
-You need Python 3.10+, an Argentic key from https://getargentic.com/platform, and a free NVIDIA key from https://build.nvidia.com.
+You need Python 3.10+, an Argentic key from https://getargentic.com/platform, and a model you choose yourself. That means its id, an OpenAI-compatible endpoint that serves it, the key for that endpoint, and its price per million tokens. Nothing in this repo picks a model for you. If a variable is missing, the scripts stop and list what they need.
 
 ```bash
 git clone https://github.com/Argentic-AI/langgraph-to-argentic && cd langgraph-to-argentic
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 export ARGENTIC_API_KEY=aek_...
-export MODEL_KEY=nvapi-...
+export ARGENTIC_MODEL_ID=your-model-id
+export ARGENTIC_MODEL_BASE_URL=https://your-endpoint.example/v1
+export ARGENTIC_PRICE_IN=0          # dollars per million input tokens; your provider's rate
+export ARGENTIC_PRICE_OUT=0         # dollars per million output tokens
+export MODEL_KEY=...                # the key for that endpoint
 python before.py
 python after.py
 ```
@@ -60,10 +65,16 @@ In fish:
 python3 -m venv .venv; and source .venv/bin/activate.fish
 pip install -r requirements.txt
 set -x ARGENTIC_API_KEY aek_...
-set -x MODEL_KEY nvapi-...
+set -x ARGENTIC_MODEL_ID your-model-id
+set -x ARGENTIC_MODEL_BASE_URL https://your-endpoint.example/v1
+set -x ARGENTIC_PRICE_IN 0
+set -x ARGENTIC_PRICE_OUT 0
+set -x MODEL_KEY ...
 ```
 
-`requirements.txt` installs the Argentic client straight from a pinned commit of [Argentic-AI/argentic-plugins](https://github.com/Argentic-AI/argentic-plugins). Each script takes a ticket count: `python before.py 8` works all eight tickets, and a larger number repeats the same cases under new ticket numbers. With four tickets, expect a few minutes on the free model, depending on how busy it is.
+`after.py` also accepts `ARGENTIC_MODEL_PROVIDER` (a named endpoint) in place of `ARGENTIC_MODEL_BASE_URL`. Set one or the other, not both. `before.py` needs the base URL, because LangChain calls an OpenAI-compatible address directly.
+
+`requirements.txt` installs the Argentic client straight from a pinned commit of [Argentic-AI/argentic-plugins](https://github.com/Argentic-AI/argentic-plugins), client 0.8.0. Each script takes a ticket count: `python before.py 8` works all eight tickets, and a larger number repeats the same cases under new ticket numbers. With four tickets, expect a few minutes, depending on the model and how busy its endpoint is.
 
 Each script prints the reply, what your tools actually did (tickets closed, refunds, emails) and the prompt size of each model call. Run `python -m unittest -v` for the offline checks, which need no keys.
 
@@ -79,7 +90,7 @@ The prompt size for `before.py` is the provider's count for each call. For `afte
 
 ## One difference to know about
 
-With Argentic, a tool call is a request: your code runs the tool and the result goes to the model on the next wake. The system prompt says so in one sentence, and the model has to follow it. When we tried Argentic's free default (`nemotron-3.5-lightning-30b-a3b`) on 2026-11-26, it kept calling tools without waiting for results and guessed refund amounts. `nvidia/nemotron-3.5-super-vl-120b-a12b`, which this repo uses, waited. If your agent misbehaves in the same way, try a stronger model before blaming the port.
+With Argentic, a tool call is a request: your code runs the tool and the result goes to the model on the next wake. The system prompt says so in one sentence, and the model has to follow it. A weaker model may chain tool calls without waiting for their results, and guess the values it should have read. If yours does, use a stronger model.
 
 ## See what the model was sent
 
